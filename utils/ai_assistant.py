@@ -30,9 +30,7 @@ async def ask_openai(prompt: str) -> dict:
         reply = response.choices[0].message.content.strip().lower()
 
         # Проверка: бот неуверен?
-        not_confident = any(phrase in reply for phrase in [
-            "не знаю", "не впевнений", "не можу сказати", "не впевнена"
-        ])
+        not_confident = "зараз дізнаюсь у власника" in reply
 
         return {
             "text": response.choices[0].message.content.strip(),
