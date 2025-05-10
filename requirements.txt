@@ -1,17 +1,17 @@
 # requirements.txt
 
-# Библиотека для работы с Telegram Bot API
+# Telegram Bot
 python-telegram-bot==20.8
 
-# Библиотеки для работы с Google Drive API (если будем использовать upload_to_drive.py)
+# Google Drive API
 google-api-python-client
 google-auth
 google-auth-httplib2
 google-auth-oauthlib
 
-# Библиотека для работы с OpenAI (если ты будешь подключать GPT позже)
-openai
+# OpenAI SDK (новая версия)
+openai>=1.1.0
 
-# Web-сервер и фреймворк
+# Web-сервер
 fastapi
 uvicorn[standard]
