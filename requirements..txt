@@ -11,3 +11,6 @@ google-auth-oauthlib
 
 # Библиотека для работы с OpenAI (если ты будешь подключать GPT позже)
 openai
+
+fastapi
+uvicorn[standard]
