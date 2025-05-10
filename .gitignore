@@ -1,0 +1,12 @@
+# .gitignore
+
+# Файлы авторизации Google
+credentials.json
+token.json
+
+# Конфигурации окружения
+.env
+
+# Кэш Python
+__pycache__/
+*.pyc
