@@ -31,31 +31,12 @@ async def ask_openai(prompt: str) -> dict:
         reply_raw = response.choices[0].message.content.strip()
         reply = reply_raw.lower()
 
-        # Список фраз, при которых бот считается "неуверенным"
-        uncertain_phrases = [
-    "зараз дізнаюсь у власника",
-    "не впевнений",
-    "не впевнена",
-    "не знаю точно",
-    "не знаю",
-    "не можу сказати",
-    "на жаль, не маю інформації",
-    "на жаль, я не маю",
-    "мені не відомо",
-    "зверніться до",
-    "перевірте на сайті",
-    "напишіть на email",
-    "уточніть у менеджера",
-    "уточніть у фахівця",
-    "ця інформація відсутня",
-    "я не знайшов",
-    "не знайшов відповіді"
-]
-
-        not_confident = any(phrase in reply for phrase in uncertain_phrases)
+        # Новый метод: определяем флаг по тегу [ASK_OWNER]
+        not_confident = "[ask_owner]" in reply
+        reply_clean = reply_raw.replace("[ASK_OWNER]", "").strip()
 
         return {
-            "text": reply_raw,
+            "text": reply_clean,                 # ← отправляем клиенту уже очищенный ответ
             "not_confident": not_confident
         }
 
