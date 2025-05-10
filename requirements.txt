@@ -11,10 +11,7 @@ google-auth-oauthlib
 
 # Библиотека для работы с OpenAI (если ты будешь подключать GPT позже)
 openai
-<<<<<<< HEAD:requirements..txt
 
+# Web-сервер и фреймворк
 fastapi
 uvicorn[standard]
-=======
-uvicorn
->>>>>>> ce9af8053b3356a68cb0c35f4e012282362bcbaf:requirements.txt
