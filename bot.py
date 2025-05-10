@@ -47,7 +47,7 @@ async def webhook(request: Request):
 async def startup_event():
     # Устанавливаем вебхук — Telegram будет отправлять сообщения на наш сервер
     await bot_app.bot.set_webhook(url=WEBHOOK_URL)
-
+    await bot_app.initialize()
 
 # === Событие при остановке FastAPI-приложения ===
 @app.on_event("shutdown")
