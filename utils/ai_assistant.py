@@ -1,24 +1,45 @@
 import os
-import openai
 from openai import AsyncOpenAI
 
-# Получаем ключ из переменной окружения
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# Инициализация клиента OpenAI
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Создаём асинхронного клиента OpenAI
-client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+# Универсальная функция чтения текстовых файлов
+def load_text_file(filename: str, fallback: str = "") -> str:
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return file.read().strip()
+    except Exception:
+        return fallback
 
-# Запрос к GPT через ChatCompletion (новый формат)
+# Загружаем файл с правилами общения (стиль, язык и т.д.)
+SYSTEM_PROMPT = load_text_file("utils/assistant_prompt.txt", "Ти — асистент у Telegram.")
+
+# Загружаем файл с предметной информацией (товары, услуги, сайт)
+KNOWLEDGE_CONTEXT = load_text_file("utils/assistant_knowledge.txt", "")
+
+# Основная функция: отправляем вопрос в OpenAI и получаем ответ
 async def ask_openai(prompt: str) -> str:
     try:
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT}
+        ]
+
+        # Добавляем предметную базу знаний (если есть)
+        if KNOWLEDGE_CONTEXT:
+            messages.append({"role": "system", "content": f"Корисна інформація:\n{KNOWLEDGE_CONTEXT}"})
+
+        # Добавляем сообщение от пользователя
+        messages.append({"role": "user", "content": prompt})
+
+        # Отправляем запрос к OpenAI
         response = await client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "Ты дружелюбный Telegram-ассистент."},
-                {"role": "user", "content": prompt}
-            ],
+            messages=messages,
             temperature=0.7,
         )
+
         return response.choices[0].message.content.strip()
+
     except Exception as e:
-        return f"Произошла ошибка при обращении к AI: {e}"
+        return f"⚠️ Помилка AI: {e}"
