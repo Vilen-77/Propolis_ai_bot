@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: propolis-ai-bot
+    env: python
+    plan: starter  # или free, если на бесплатном плане
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python bot.py"
+    pythonVersion: 3.11
