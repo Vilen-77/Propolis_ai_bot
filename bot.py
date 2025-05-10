@@ -2,7 +2,8 @@ from fastapi import FastAPI, Request
 from telegram import Update
 from telegram.ext import ApplicationBuilder
 from utils.config import TOKEN, WEBHOOK_URL
-from modules.commands import add_handlers  # теперь /start берём из модуля
+from modules.commands import add_handlers  # команды
+from modules.messages import add_handlers as add_ai_handlers  # AI
 
 app = FastAPI()
 
@@ -11,8 +12,9 @@ bot_app = ApplicationBuilder().token(TOKEN).build()
 
 @app.on_event("startup")
 async def startup_event():
-    await bot_app.initialize()           # обязательно для вебхуков!
-    add_handlers(bot_app)                # подключаем все команды
+    await bot_app.initialize()            # инициализация Telegram Application
+    add_handlers(bot_app)                 # команды (например, /start)
+    add_ai_handlers(bot_app)              # AI-ответы на обычные тексты
     await bot_app.bot.set_webhook(url=WEBHOOK_URL)
 
 @app.on_event("shutdown")
