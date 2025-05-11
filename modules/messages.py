@@ -23,6 +23,7 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Получаем ответ от AI с учётом истории
     result = await ask_openai(prompt, history)
+    await update.message.reply_text(f"[DEBUG] RAW: {result.get('raw', '—')}")
     reply_text = result["text"]
     not_confident = result["not_confident"]
 
