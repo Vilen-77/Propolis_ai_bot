@@ -15,7 +15,7 @@ SYSTEM_PROMPT = load_text_file("utils/assistant_prompt.txt", "Ти — AI-пом
 KNOWLEDGE_CONTEXT = load_text_file("utils/assistant_knowledge.txt", "")
 
 # Основная функция: запрос к GPT + определение уверенности
-async def ask_openai(prompt: str, history: str = "") -> dict:
+async def ask_openai(prompt: str, history: str = "", extra_knowledge: str = "") -> dict:   #async def ask_openai(prompt: str, history: str = "") -> dict:      заменил
     try:
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
@@ -24,6 +24,9 @@ async def ask_openai(prompt: str, history: str = "") -> dict:
 
         if history:
             messages.append({"role": "system", "content": f"Контекст попередньої розмови:\n{history}"})
+        
+        if extra_knowledge:
+          messages.append({"role": "system", "content": f"Додаткова інформація:\n{extra_knowledge}"}) #добавил
 
         messages.append({"role": "user", "content": prompt})
 
