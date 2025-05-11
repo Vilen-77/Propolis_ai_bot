@@ -21,13 +21,29 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         history = ""
 
-    # Получаем ответ от AI с учётом истории
+    # Первый вызов GPT (без доп. знаний)
     result = await ask_openai(prompt, history)
-    await update.message.reply_text(f"[DEBUG] RAW: {result.get('raw', '—')}")
     reply_text = result["text"]
     not_confident = result["not_confident"]
+    raw = result.get("raw", "")
 
-    # Сохраняем новую реплику в память
+    # Показываем отладочный ответ GPT
+    await update.message.reply_text(f"[DEBUG] RAW: {raw}")
+
+    # Если GPT вставил тег [BYRKI], повторно вызываем с дополнительной информацией
+    if "[BYRKI]" in raw:
+        try:
+            with open("utils/knowledge_BYRKI.txt", "r", encoding="utf-8") as f:
+                extra_knowledge = f.read().strip()
+        except Exception:
+            extra_knowledge = ""
+
+        # Повторный вызов GPT с доп. знанием
+        result = await ask_openai(prompt, history, extra_knowledge=extra_knowledge)
+        reply_text = result["text"]
+        not_confident = result["not_confident"]
+
+    # Сохраняем в историю
     save_memory_to_drive(user_id, f"👤 {prompt}\n🤖 {reply_text}")
 
     if not_confident:
@@ -38,7 +54,6 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{prompt}"
         )
         await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=notify)
-
         pending_replies[user.id] = update.message.chat_id
     else:
         await update.message.reply_text(reply_text)
