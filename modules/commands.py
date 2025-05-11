@@ -1,6 +1,7 @@
 import os
 from telegram.ext import CommandHandler, Application, ContextTypes
 from telegram import Update
+from utils.memory_google import save_memory_to_drive
 
 # ID владельца
 ADMIN_CHAT_ID = 839647871
@@ -20,6 +21,18 @@ WELCOME_MESSAGE = load_text_file("utils/hello.txt", fallback=(
     "Можу звернутись до власника або з'єднати Вас напряму.\n"
     "Чим можу допомогти зараз?"
 ))
+
+# === Обработчик команды /save_test ===
+async def save_test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    test_message = "🧪 Тестове повідомлення з команди /save_test"
+
+    try:
+        result = save_memory_to_drive(user_id, test_message)
+        await update.message.reply_text(result)
+    except Exception as e:
+        await update.message.reply_text(f"❌ Помилка збереження: {e}")
+
 
 # === Обработчик команды /start ===
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -56,3 +69,4 @@ async def reply_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def add_handlers(application: Application):
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("reply", reply_command))
+    application.add_handler(CommandHandler("save_test", save_test_command))  # 🆕 добавили
