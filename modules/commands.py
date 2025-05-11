@@ -1,8 +1,9 @@
 import os
 from telegram.ext import CommandHandler, Application, ContextTypes
 from telegram import Update
-from utils.memory_google import save_memory_to_drive
-from utils.memory_google import create_drive_folder
+from io import BytesIO
+
+from utils.memory_google import save_memory_to_drive, create_drive_folder, load_memory_from_drive
 
 # ID владельца
 ADMIN_CHAT_ID = 839647871
@@ -15,15 +16,6 @@ def load_text_file(filename: str, fallback: str = "") -> str:
     except Exception:
         return fallback
 
-# === Обработчик команды /create_folder_test ===
-async def create_folder_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        folder_id = create_drive_folder("SvitBotMemory")
-        await update.message.reply_text(f"✅ Папка створена!\nID: `{folder_id}`", parse_mode="Markdown")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Помилка створення папки: {e}")
-
-
 # Загружаем приветствие при старте бота
 WELCOME_MESSAGE = load_text_file("utils/hello.txt", fallback=(
     "Привіт! Я AI-помічник типографії 🧠\n"
@@ -31,18 +23,6 @@ WELCOME_MESSAGE = load_text_file("utils/hello.txt", fallback=(
     "Можу звернутись до власника або з'єднати Вас напряму.\n"
     "Чим можу допомогти зараз?"
 ))
-
-# === Обработчик команды /save_test ===
-async def save_test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    test_message = "🧪 Тестове повідомлення з команди /save_test"
-
-    try:
-        result = save_memory_to_drive(user_id, test_message)
-        await update.message.reply_text(result)
-    except Exception as e:
-        await update.message.reply_text(f"❌ Помилка збереження: {e}")
-
 
 # === Обработчик команды /start ===
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -75,10 +55,47 @@ async def reply_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"⚠️ Помилка: {e}")
 
+# === Обработчик команды /save_test ===
+async def save_test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    test_message = "🧪 Тестове повідомлення з команди /save_test"
+
+    try:
+        result = save_memory_to_drive(user_id, test_message)
+        await update.message.reply_text(result)
+    except Exception as e:
+        await update.message.reply_text(f"❌ Помилка збереження: {e}")
+
+# === Обработчик команды /create_folder_test ===
+async def create_folder_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        folder_id = create_drive_folder("SvitBotMemory")
+        await update.message.reply_text(f"✅ Папка створена!\nID: `{folder_id}`", parse_mode="Markdown")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Помилка створення папки: {e}")
+
+# === Обработчик команды /load_test ===
+async def load_test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+
+    try:
+        content = load_memory_from_drive(user_id)
+
+        if not content:
+            await update.message.reply_text("ℹ️ Історія пуста.")
+        elif len(content) < 3000:
+            await update.message.reply_text(f"🧠 Памʼять:\n\n{content}")
+        else:
+            file_stream = BytesIO(content.encode("utf-8"))
+            file_stream.name = f"user_{user_id}_memory.txt"
+            await update.message.reply_document(document=file_stream, filename=file_stream.name)
+    except Exception as e:
+        await update.message.reply_text(f"❌ Помилка при завантаженні: {e}")
+
 # === Регистрация всех хендлеров ===
 def add_handlers(application: Application):
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("reply", reply_command))
-    application.add_handler(CommandHandler("save_test", save_test_command))  # 🆕 добавили
-    application.add_handler(CommandHandler("create_folder_test", create_folder_command)) # добавил для теста записи на гугл диск
-
+    application.add_handler(CommandHandler("save_test", save_test_command))
+    application.add_handler(CommandHandler("create_folder_test", create_folder_command))
+    application.add_handler(CommandHandler("load_test", load_test_command))
