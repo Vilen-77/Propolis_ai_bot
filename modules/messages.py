@@ -27,9 +27,13 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     not_confident = result["not_confident"]
     raw = result.get("raw", "")
 
+   
     # Показываем отладочный ответ GPT
-    await update.message.reply_text(f"[DEBUG] RAW: {raw}")
-
+    # await update.message.reply_text(f"[DEBUG] RAW: {raw}")
+    if user.username == "Vilen77":  # или другой способ проверки
+        await update.message.reply_text(f"[DEBUG] RAW: {raw}")
+    
+    
     # Если GPT вставил тег [BYRKI], повторно вызываем с дополнительной информацией
     if "[BYRKI]" in raw:
         try:
