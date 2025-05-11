@@ -39,9 +39,10 @@ async def ask_openai(prompt: str, history: str = "") -> dict:
         not_confident = "[ask_owner]" in reply
         reply_clean = reply_raw.replace("[ASK_OWNER]", "").strip()
 
-        return {
+             return {
             "text": reply_clean,
-            "not_confident": not_confident
+            "not_confident": not_confident,
+            "raw": reply_raw  # сырой ответ GPT
         }
 
     except Exception as e:
