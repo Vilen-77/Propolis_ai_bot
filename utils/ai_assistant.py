@@ -1,67 +1,60 @@
+# === Файл: modules/messages.py ===
+
+from telegram import Update
+from telegram.ext import ContextTypes, MessageHandler, filters, Application
+from utils.ai_assistant import ask_openai
+from utils.memory_google import load_memory_from_drive, save_memory_to_drive
 import os
-from openai import AsyncOpenAI
-import re
 
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+ADMIN_CHAT_ID = 839647871
+pending_replies = {}
 
-def load_text_file(filename: str, fallback: str = "") -> str:
-    try:
+def load_tag_knowledge(tag: str) -> str:
+    filename = f"utils/knowledge_{tag.lower()}.txt"
+    if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as file:
-            return file.read().strip()
-    except Exception:
-        return fallback
+            return file.read()
+    return ""
 
-SYSTEM_PROMPT = load_text_file("utils/assistant_prompt.txt", "Ти — AI-помічник.")
+async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    prompt = update.message.text
+    user_id = user.id
 
-# Видаляємо assistant_knowledge.txt — тепер буде підключатись через тег GENERAL
-
-async def ask_openai(prompt: str, history: str = "", extra_knowledge: str = "") -> dict:
     try:
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        history = load_memory_from_drive(user_id)
+    except Exception:
+        history = ""
 
-        # Якщо тег GENERAL — підтягуємо knowledge_general.txt
-        if extra_knowledge:
-            messages.append({"role": "system", "content": f"Додаткова інформація:\n{extra_knowledge}"})
-        else:
-            general_fallback = load_text_file("utils/knowledge_general.txt")
-            if general_fallback:
-                messages.append({"role": "system", "content": f"Додаткова інформація:\n{general_fallback}"})
+    # Первый вызов
+    result = await ask_openai(prompt, history)
+    reply_text = result["text"]
+    not_confident = result["not_confident"]
+    extra_tags = result.get("extra_tags", [])
+    await update.message.reply_text(f"[DEBUG] extra_tags: {', '.join(extra_tags)}")
 
-        if history:
-            for line in history.splitlines():
-                if line.startswith("👤"):
-                    messages.append({"role": "user", "content": line[2:].strip()})
-                elif line.startswith("🤖"):
-                    messages.append({"role": "assistant", "content": line[2:].strip()})
+    # Если есть подходящие знания — вызываем повторно
+    for tag in extra_tags:
+        if tag != "GENERAL":
+            extra_knowledge = load_tag_knowledge(tag)
+            if extra_knowledge:
+                result = await ask_openai(prompt, history, extra_knowledge)
+                reply_text = result["text"]
+                not_confident = result["not_confident"]
+                break
 
-        messages.append({"role": "user", "content": prompt})
+    save_memory_to_drive(user_id, f"👤 {prompt}\n🤖 {reply_text}")
 
-        response = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            temperature=0.7,
+    if not_confident:
+        await update.message.reply_text("Момент, зараз дізнаюсь у власника...")
+        notify = (
+            f"❓ Запит від @{user.username or '—'} (ID: {user.id}):\n"
+            f"{prompt}"
         )
+        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=notify)
+        pending_replies[user.id] = update.message.chat_id
+    else:
+        await update.message.reply_text(reply_text)
 
-        reply_raw = response.choices[0].message.content.strip()
-        reply = reply_raw.lower()
-
-        not_confident = "[ask_owner]" in reply
-        extra_tag = None
-        match = re.search(r"\[(\w+)\]", reply)
-        if match and match.group(1).lower() not in ["ask_owner"]:
-            extra_tag = match.group(1).upper()
-
-        reply_clean = re.sub(r"\[[^\]]+\]", "", reply_raw).strip()
-
-        return {
-            "text": reply_clean,
-            "not_confident": not_confident,
-            "extra_tag": extra_tag
-        }
-
-    except Exception as e:
-        return {
-            "text": f"⚠️ Помилка AI: {e}",
-            "not_confident": True,
-            "extra_tag": None
-        }
+def add_handlers(application: Application):
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_response))
