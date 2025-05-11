@@ -29,11 +29,10 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_text = result["text"]
     not_confident = result["not_confident"]
     extra_tag = result.get("extra_tag")
-    await update.message.reply_text(f"[DEBUG] extra_tag: {extra_tag or '— тег не знайдено —'}") #добавил вывод тега
+    await update.message.reply_text(f"[DEBUG] extra_tag: {extra_tag or '— тег не знайдено —'}")
 
-
-    # Если есть тег — повторно вызываем с доп. знанием
-    if extra_tag:
+    # Если есть тег — повторно вызываем с доп. знанием (кроме GENERAL)
+    if extra_tag and extra_tag != "GENERAL":
         extra_knowledge = load_tag_knowledge(extra_tag)
         if extra_knowledge:
             result = await ask_openai(prompt, history, extra_knowledge)
@@ -46,7 +45,6 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Обработка неуверенного ответа (ASK_OWNER)
     if not_confident:
         await update.message.reply_text("Момент, зараз дізнаюсь у власника...")
-
         notify = (
             f"❓ Запит від @{user.username or '—'} (ID: {user.id}):\n"
             f"{prompt}"
