@@ -2,6 +2,7 @@ import os
 from telegram.ext import CommandHandler, Application, ContextTypes
 from telegram import Update
 from utils.memory_google import save_memory_to_drive
+from utils.memory_google import create_drive_folder
 
 # ID владельца
 ADMIN_CHAT_ID = 839647871
@@ -13,6 +14,15 @@ def load_text_file(filename: str, fallback: str = "") -> str:
             return file.read().strip()
     except Exception:
         return fallback
+
+# === Обработчик команды /create_folder_test ===
+async def create_folder_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        folder_id = create_drive_folder("SvitBotMemory")
+        await update.message.reply_text(f"✅ Папка створена!\nID: `{folder_id}`", parse_mode="Markdown")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Помилка створення папки: {e}")
+
 
 # Загружаем приветствие при старте бота
 WELCOME_MESSAGE = load_text_file("utils/hello.txt", fallback=(
@@ -70,3 +80,5 @@ def add_handlers(application: Application):
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("reply", reply_command))
     application.add_handler(CommandHandler("save_test", save_test_command))  # 🆕 добавили
+    application.add_handler(CommandHandler("create_folder_test", create_folder_command)) # добавил для теста записи на гугл диск
+
