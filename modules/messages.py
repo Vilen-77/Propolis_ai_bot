@@ -41,6 +41,7 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Сохраняем в память
     save_memory_to_drive(user_id, f"👤 {prompt}\n🤖 {reply_text}")
 
+    # Обработка неуверенного ответа (ASK_OWNER)
     if not_confident:
         await update.message.reply_text("Момент, зараз дізнаюсь у власника...")
 
