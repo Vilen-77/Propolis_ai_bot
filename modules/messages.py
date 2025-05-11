@@ -1,3 +1,6 @@
+import re
+import os
+
 from telegram import Update
 from telegram.ext import ContextTypes, MessageHandler, filters, Application
 from utils.ai_assistant import ask_openai
@@ -34,19 +37,22 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"[DEBUG] RAW: {raw}")
     
     
-    # Если GPT вставил тег [BYRKI], повторно вызываем с дополнительной информацией
-    if "[BYRKI]" in raw:
-        try:
-            with open("utils/knowledge_BYRKI.txt", "r", encoding="utf-8") as f:
-                extra_knowledge = f.read().strip()
-        except Exception:
-            extra_knowledge = ""
+    # Ищем все теги вида [SOMETHING]
+    tags = re.findall(r"\[([A-Z_]+)\]", raw)
+    extra_knowledge = ""
 
-        # Повторный вызов GPT с доп. знанием
+    for tag in tags:
+        knowledge_path = f"utils/knowledge_{tag}.txt"
+        if os.path.exists(knowledge_path):
+            with open(knowledge_path, "r", encoding="utf-8") as f:
+                extra_knowledge += f"\n\n# Знання для [{tag}]:\n" + f.read().strip()
+
+     # Если нашли хотя бы один файл — делаем повторный вызов
+    if extra_knowledge:
         result = await ask_openai(prompt, history, extra_knowledge=extra_knowledge)
         reply_text = result["text"]
         not_confident = result["not_confident"]
-
+    
     # Сохраняем в историю
     save_memory_to_drive(user_id, f"👤 {prompt}\n🤖 {reply_text}")
 
