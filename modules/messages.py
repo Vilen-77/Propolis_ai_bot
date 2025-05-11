@@ -29,6 +29,8 @@ async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_text = result["text"]
     not_confident = result["not_confident"]
     extra_tag = result.get("extra_tag")
+    await update.message.reply_text(f"[DEBUG] extra_tag: {extra_tag or '— тег не знайдено —'}") #добавил вывод тега
+
 
     # Если есть тег — повторно вызываем с доп. знанием
     if extra_tag:
