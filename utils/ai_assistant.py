@@ -1,60 +1,51 @@
-# === Файл: modules/messages.py ===
-
-from telegram import Update
-from telegram.ext import ContextTypes, MessageHandler, filters, Application
-from utils.ai_assistant import ask_openai
-from utils.memory_google import load_memory_from_drive, save_memory_to_drive
 import os
+from openai import AsyncOpenAI
 
-ADMIN_CHAT_ID = 839647871
-pending_replies = {}
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def load_tag_knowledge(tag: str) -> str:
-    filename = f"utils/knowledge_{tag.lower()}.txt"
-    if os.path.exists(filename):
-        with open(filename, "r", encoding="utf-8") as file:
-            return file.read()
-    return ""
-
-async def ai_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    prompt = update.message.text
-    user_id = user.id
-
+def load_text_file(filename: str, fallback: str = "") -> str:
     try:
-        history = load_memory_from_drive(user_id)
+        with open(filename, "r", encoding="utf-8") as file:
+            return file.read().strip()
     except Exception:
-        history = ""
+        return fallback
 
-    # Первый вызов
-    result = await ask_openai(prompt, history)
-    reply_text = result["text"]
-    not_confident = result["not_confident"]
-    extra_tags = result.get("extra_tags", [])
-    await update.message.reply_text(f"[DEBUG] extra_tags: {', '.join(extra_tags)}")
+# Загружаем инструкции
+SYSTEM_PROMPT = load_text_file("utils/assistant_prompt.txt", "Ти — AI-помічник.")
+KNOWLEDGE_CONTEXT = load_text_file("utils/assistant_knowledge.txt", "")
 
-    # Если есть подходящие знания — вызываем повторно
-    for tag in extra_tags:
-        if tag != "GENERAL":
-            extra_knowledge = load_tag_knowledge(tag)
-            if extra_knowledge:
-                result = await ask_openai(prompt, history, extra_knowledge)
-                reply_text = result["text"]
-                not_confident = result["not_confident"]
-                break
+# Основная функция: запрос к GPT + определение уверенности
+async def ask_openai(prompt: str, history: str = "") -> dict:
+    try:
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    save_memory_to_drive(user_id, f"👤 {prompt}\n🤖 {reply_text}")
+        if KNOWLEDGE_CONTEXT:
+            messages.append({"role": "system", "content": f"Корисна інформація:\n{KNOWLEDGE_CONTEXT}"})
 
-    if not_confident:
-        await update.message.reply_text("Момент, зараз дізнаюсь у власника...")
-        notify = (
-            f"❓ Запит від @{user.username or '—'} (ID: {user.id}):\n"
-            f"{prompt}"
+        if history:
+            messages.append({"role": "system", "content": f"Контекст попередньої розмови:\n{history}"})
+
+        messages.append({"role": "user", "content": prompt})
+
+        response = await client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            temperature=0.7,
         )
-        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=notify)
-        pending_replies[user.id] = update.message.chat_id
-    else:
-        await update.message.reply_text(reply_text)
 
-def add_handlers(application: Application):
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_response))
+        reply_raw = response.choices[0].message.content.strip()
+        reply = reply_raw.lower()
+
+        not_confident = "[ask_owner]" in reply
+        reply_clean = reply_raw.replace("[ASK_OWNER]", "").strip()
+
+        return {
+            "text": reply_clean,
+            "not_confident": not_confident
+        }
+
+    except Exception as e:
+        return {
+            "text": f"⚠️ Помилка AI: {e}",
+            "not_confident": True
+        }
