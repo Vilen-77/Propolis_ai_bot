@@ -1,18 +1,29 @@
-from telegram.ext import CommandHandler, Application
+import os
+from telegram.ext import CommandHandler, Application, ContextTypes
 from telegram import Update
-from telegram.ext import ContextTypes
 
 # ID владельца
 ADMIN_CHAT_ID = 839647871
 
+# === Функция чтения текста из файла ===
+def load_text_file(filename: str, fallback: str = "") -> str:
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return file.read().strip()
+    except Exception:
+        return fallback
+
+# Загружаем приветствие при старте бота
+WELCOME_MESSAGE = load_text_file("utils/hello.txt", fallback=(
+    "Привіт! Я AI-помічник типографії 🧠\n"
+    "Знаю майже все про компанію та відповідаю на більшість питань.\n"
+    "Можу звернутись до власника або з'єднати Вас напряму.\n"
+    "Чим можу допомогти зараз?"
+))
+
 # === Обработчик команды /start ===
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Привіт! Я AI-помічник типографії 🧠\n"
-        "Знаю майже все про компанію та відповідаю на більшість питань.\n"
-        "Можу звернутись до власника або з'єднати Вас напряму.\n"
-        "Чим можу допомогти зараз?"
-    )
+    await update.message.reply_text(WELCOME_MESSAGE)
 
     user = update.effective_user
     message = (
