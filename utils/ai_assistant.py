@@ -11,20 +11,21 @@ def load_text_file(filename: str, fallback: str = "") -> str:
     except Exception:
         return fallback
 
-# Загружаем инструкции и общие знания
 SYSTEM_PROMPT = load_text_file("utils/assistant_prompt.txt", "Ти — AI-помічник.")
-KNOWLEDGE_CONTEXT = load_text_file("utils/assistant_knowledge.txt", "")
 
-# Основная функция общения с OpenAI
+# Видаляємо assistant_knowledge.txt — тепер буде підключатись через тег GENERAL
+
 async def ask_openai(prompt: str, history: str = "", extra_knowledge: str = "") -> dict:
     try:
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-        if KNOWLEDGE_CONTEXT:
-            messages.append({"role": "system", "content": f"Корисна інформація:\n{KNOWLEDGE_CONTEXT}"})
-
+        # Якщо тег GENERAL — підтягуємо knowledge_general.txt
         if extra_knowledge:
             messages.append({"role": "system", "content": f"Додаткова інформація:\n{extra_knowledge}"})
+        else:
+            general_fallback = load_text_file("utils/knowledge_general.txt")
+            if general_fallback:
+                messages.append({"role": "system", "content": f"Додаткова інформація:\n{general_fallback}"})
 
         if history:
             for line in history.splitlines():
@@ -42,17 +43,14 @@ async def ask_openai(prompt: str, history: str = "", extra_knowledge: str = "") 
         )
 
         reply_raw = response.choices[0].message.content.strip()
+        reply = reply_raw.lower()
 
-        # Определение [ASK_OWNER]
-        not_confident = "[ASK_OWNER]" in reply_raw.upper()
-
-        # Поиск дополнительного тега (если есть)
+        not_confident = "[ask_owner]" in reply
         extra_tag = None
-        match = re.search(r"\[([A-Z_]+)\]", reply_raw.upper())
-        if match and match.group(1) != "ASK_OWNER":
-            extra_tag = match.group(1)
+        match = re.search(r"\[(\w+)\]", reply)
+        if match and match.group(1).lower() not in ["ask_owner"]:
+            extra_tag = match.group(1).upper()
 
-        # Удаление тегов из ответа
         reply_clean = re.sub(r"\[[^\]]+\]", "", reply_raw).strip()
 
         return {
