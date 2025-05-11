@@ -11,9 +11,11 @@ def load_text_file(filename: str, fallback: str = "") -> str:
     except Exception:
         return fallback
 
+# Загружаем инструкции и общие знания
 SYSTEM_PROMPT = load_text_file("utils/assistant_prompt.txt", "Ти — AI-помічник.")
 KNOWLEDGE_CONTEXT = load_text_file("utils/assistant_knowledge.txt", "")
 
+# Основная функция общения с OpenAI
 async def ask_openai(prompt: str, history: str = "", extra_knowledge: str = "") -> dict:
     try:
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -40,14 +42,17 @@ async def ask_openai(prompt: str, history: str = "", extra_knowledge: str = "") 
         )
 
         reply_raw = response.choices[0].message.content.strip()
-        reply = reply_raw.lower()
 
-        not_confident = "[ask_owner]" in reply
+        # Определение [ASK_OWNER]
+        not_confident = "[ASK_OWNER]" in reply_raw.upper()
+
+        # Поиск дополнительного тега (если есть)
         extra_tag = None
-        match = re.search(r"\[(\w+)\]", reply)
-        if match and match.group(1).lower() not in ["ask_owner"]:
-            extra_tag = match.group(1).upper()
+        match = re.search(r"\[([A-Z_]+)\]", reply_raw.upper())
+        if match and match.group(1) != "ASK_OWNER":
+            extra_tag = match.group(1)
 
+        # Удаление тегов из ответа
         reply_clean = re.sub(r"\[[^\]]+\]", "", reply_raw).strip()
 
         return {
