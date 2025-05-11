@@ -15,11 +15,16 @@ SYSTEM_PROMPT = load_text_file("utils/assistant_prompt.txt", "Ти — AI-пом
 KNOWLEDGE_CONTEXT = load_text_file("utils/assistant_knowledge.txt", "")
 
 # Основная функция: запрос к GPT + определение уверенности
-async def ask_openai(prompt: str) -> dict:
+async def ask_openai(prompt: str, history: str = "") -> dict:
     try:
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+
         if KNOWLEDGE_CONTEXT:
             messages.append({"role": "system", "content": f"Корисна інформація:\n{KNOWLEDGE_CONTEXT}"})
+
+        if history:
+            messages.append({"role": "system", "content": f"Контекст попередньої розмови:\n{history}"})
+
         messages.append({"role": "user", "content": prompt})
 
         response = await client.chat.completions.create(
@@ -31,12 +36,11 @@ async def ask_openai(prompt: str) -> dict:
         reply_raw = response.choices[0].message.content.strip()
         reply = reply_raw.lower()
 
-        # Новый метод: определяем флаг по тегу [ASK_OWNER]
         not_confident = "[ask_owner]" in reply
         reply_clean = reply_raw.replace("[ASK_OWNER]", "").strip()
 
         return {
-            "text": reply_clean,                 # ← отправляем клиенту уже очищенный ответ
+            "text": reply_clean,
             "not_confident": not_confident
         }
 
