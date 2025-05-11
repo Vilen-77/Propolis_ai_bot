@@ -41,3 +41,13 @@ def save_memory_to_drive(user_id: int, message: str) -> str:
     else:
         created = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
         return f"✅ Создано: {created['id']}"
+
+def create_drive_folder(folder_name: str = "SvitBotMemory") -> str:
+    drive_service = get_drive_service()
+    file_metadata = {
+        "name": folder_name,
+        "mimeType": "application/vnd.google-apps.folder"
+    }
+
+    folder = drive_service.files().create(body=file_metadata, fields="id").execute()
+    return folder.get("id")
