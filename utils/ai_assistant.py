@@ -1,3 +1,4 @@
+import re # ДЛЯ ОЧИСТКИ ОТ ТЕГА
 import os
 from openai import AsyncOpenAI
 
@@ -41,6 +42,7 @@ async def ask_openai(prompt: str, history: str = "", extra_knowledge: str = "") 
 
         not_confident = "[ask_owner]" in reply
         reply_clean = reply_raw.replace("[ASK_OWNER]", "").strip()
+        reply_clean = re.sub(r"\[.*?\]", "", reply_raw).strip()   # очистка текста от тега
 
         return {
             "text": reply_clean,
